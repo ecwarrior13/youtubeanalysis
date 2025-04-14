@@ -30,7 +30,7 @@ function HeroSection() {
         Automate workflows, solve complex problems, and enhance productivity.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link href="/signup">
+        <Link href="/sign-up">
           <Button
             size="lg"
             className="gap-2 bg-accent hover:bg-accent/90 text-accent-foreground"

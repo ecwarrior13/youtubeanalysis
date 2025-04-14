@@ -3,31 +3,13 @@ import React from "react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import companyLogo from "../../public/aisemble_transparent.png";
-
-const UserInfoSkeleton = () => {
-  return (
-    <div className="flex items-center gap-3">
-      {/* Avatar Skeleton */}
-      <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
-      
-      {/* User Info Skeleton */}
-      <div className="hidden md:flex flex-col gap-1">
-        <div className="h-3 w-20 bg-muted rounded animate-pulse" />
-        <div className="h-2 w-16 bg-muted/50 rounded animate-pulse" />
-      </div>
-      
-      {/* Dropdown Arrow Skeleton */}
-      <div className="w-4 h-4 bg-muted rounded animate-pulse" />
-    </div>
-  );
-};
+import { ThemeToggle } from "./theme-toggle";
 
 function Navigation() {
   return (
     <header className="bg-secondary/20 backdrop-blur-sm sticky top-0 z-10 border-b border-border">
       <div className="container mx-auto py-4 px-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          {/* <BrainCircuit className="h-8 w-8 text-primary" /> */}
           <Image src={companyLogo} alt="AIsemble Logo" width={50} height={50} />
           <h1 className="text-xl font-bold">
             <span className="text-[#e63946] dark:text-[#e63946]">AI</span>
@@ -35,7 +17,7 @@ function Navigation() {
               semble
             </span>
           </h1>
-          {/* <ThemeToggle /> */}
+          <ThemeToggle />
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <Link
@@ -64,7 +46,12 @@ function Navigation() {
           </Link>
         </nav>
         <div className="flex items-center gap-4">
-          <UserInfoSkeleton />
+          <Link href="/sign-in">
+            <Button variant="outline">Log In</Button>
+          </Link>
+          <Link href="/sign-up">
+            <Button>Sign Up</Button>
+          </Link>
         </div>
       </div>
     </header>

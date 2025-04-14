@@ -1,20 +1,29 @@
-import { Metadata } from "next";
 import React from "react";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Sign Up - AIsemble",
-  description: "Create your AIsemble account",
-};
+import Logo from "@/components/Logo";
+import { SignUpForm } from "@/components/auth/signup-form";
 
-export default function SignUpPage() {
+export default async function SignUpPage() {
+  const supabase = await createClient();
+
+  // Check if user is already authenticated
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // If user is authenticated, redirect to dashboard
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="w-full max-w-md space-y-4 px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Create an account
-          </h1>
-        </div>
+    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <Logo></Logo>
+
+        <SignUpForm />
       </div>
     </div>
   );
