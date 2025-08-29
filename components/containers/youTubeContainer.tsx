@@ -1,7 +1,7 @@
 import React from "react";
 import YoutubeVideoDetails from "@/components/youtube/YoutubeVideoDetails";
 import YoutubeTranscripts from "@/components/youtube/YoutubeTranscripts";
-import AiAgentChatInterface from "@/components/chat/AiAgentChatInterface";
+import AiAgentChatInterface from "@/components/chat/AiAgentChatInterface2";
 
 interface YoutubeAgentContainerProps {
   inputValue?: string;

@@ -40,6 +40,14 @@ class ChatHistoryService {
     // Create a new chat session
     async createChatSession(videoId: string, title?: string): Promise<ChatSession | null> {
         try {
+
+            // Get current user if authenticated
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                throw new Error("User not authenticated");
+            }
+
             const { data, error } = await supabase
                 .from('chat_sessions')
                 .insert({
