@@ -3,6 +3,7 @@
 import { VideoTranscript } from "@/types/youtubeTypes";
 import { createClient } from "@/utils/supabase/server";
 import { Innertube } from "youtubei.js";
+import { getVideoDetails } from "./getVideoDetails"; // Add this import
 
 type TranscriptResults = {
     success: boolean;
@@ -83,6 +84,10 @@ export async function getYoutubeTranscripts(videoId: string) {
         //fetch transcripts from youtube
         const transcripts = await fetchTranscripts(videoId);
 
+        // Fetch video details to get the title
+        const videoDetails = await getVideoDetails(videoId);
+        const videoTitle = videoDetails?.title || "Unknown Title";
+
         //save transcripts to database
         const { data: newTranscripts, error: saveError } = await supabase
             .from("transcript")
@@ -90,6 +95,7 @@ export async function getYoutubeTranscripts(videoId: string) {
                 {
                     video_id: videoId,
                     transcript: JSON.stringify(transcripts),
+                    title: videoTitle,
                     user_id: user.id,
                 }
             ])

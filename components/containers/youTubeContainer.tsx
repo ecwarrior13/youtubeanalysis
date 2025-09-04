@@ -1,7 +1,8 @@
 import React from "react";
 import YoutubeVideoDetails from "@/components/youtube/YoutubeVideoDetails";
 import YoutubeTranscripts from "@/components/youtube/YoutubeTranscripts";
-import AiAgentChatInterface from "@/components/chat/AiAgentChatInterface2";
+import AiAgentChatInterface from "@/components/chat/AiAgentChatInterface";
+import ChatLayout from "@/components/chat/ChatLayout";
 
 interface YoutubeAgentContainerProps {
   inputValue?: string;
@@ -32,6 +33,7 @@ function YoutubeAgentContainer({ inputValue }: YoutubeAgentContainerProps) {
           </div>
         ) : (
           <AiAgentChatInterface agentInfo={inputValue} />
+          //<ChatLayout agentInfo={inputValue} />
         )}
       </div>
     </div>

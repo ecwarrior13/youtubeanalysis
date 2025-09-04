@@ -1,10 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@/utils/supabase/client";
 
 // Initialize Supabase client
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClient();
 
 export interface ChatSession {
     id: string;
@@ -53,6 +50,8 @@ class ChatHistoryService {
                 .insert({
                     video_id: videoId,
                     title: title || `Chat about Video ${videoId}`,
+                    user_id: user.id,
+                    agent_id: 'bb15768a-f4fa-4c95-a0e3-2c7d327a1439',
                 })
                 .select()
                 .single();

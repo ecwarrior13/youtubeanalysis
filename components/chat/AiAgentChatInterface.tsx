@@ -1,21 +1,97 @@
 import { useChat } from "@ai-sdk/react";
 import { BotIcon, ImageIcon, LetterText, PenIcon, Send } from "lucide-react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import ChatMessage from "@/components/chat/ChatMessage";
+import ChatHistoryDropdown from "./ChatHistoryDropdown";
+import { createClient } from "@/utils/supabase/client";
 
 function AiAgentChatInterface({ agentInfo }: { agentInfo: string }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+    setMessages,
+  } = useChat({
     api: "/api/youtube/chat",
     maxSteps: 5,
     body: {
       videoId: agentInfo,
+      sessionId: sessionId,
     },
   });
+
+  // Load messages from a selected chat session
+  const loadChatSession = async (selectedSessionId: string) => {
+    try {
+      const supabase = createClient();
+      const { data: chatMessages, error } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("session_id", selectedSessionId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error loading chat messages:", error);
+        toast.error("Failed to load chat history");
+        return;
+      }
+
+      // Convert to the format expected by useChat
+      const formattedMessages =
+        chatMessages?.map((msg) => ({
+          id: msg.id,
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          createdAt: new Date(msg.created_at),
+        })) || [];
+
+      setMessages(formattedMessages);
+      setSessionId(selectedSessionId);
+      toast.success("Chat history loaded");
+    } catch (error) {
+      console.error("Error loading chat session:", error);
+      toast.error("Failed to load chat history");
+    }
+  };
+
+  // Create session on first message
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // If this is the first message and no session exists, create one
+    if (!sessionId && messages.length === 0) {
+      try {
+        const response = await fetch("/api/chat-sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoId: agentInfo }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to create session");
+        }
+        const { sessionId: newSessionId } = await response.json();
+        setSessionId(newSessionId);
+        // Wait a bit to ensure sessionId is set before submitting
+        setTimeout(() => {
+          handleSubmit(e);
+        }, 100);
+      } catch (error) {
+        console.error("Error creating session:", error);
+        // Still allow the chat to proceed even if session creation fails
+        handleSubmit(e);
+      }
+    } else {
+      // Normal submission for subsequent messages
+      handleSubmit(e);
+    }
+  };
 
   //flow with messages
   useEffect(() => {
@@ -56,7 +132,14 @@ function AiAgentChatInterface({ agentInfo }: { agentInfo: string }) {
   return (
     <div className="flex flex-col h-full">
       <div className="hidden lg:block px-4 pb-3 border-b border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-800">AI Agent</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-800">AI Agent</h2>
+          <ChatHistoryDropdown
+            videoId={agentInfo}
+            onSelectSession={loadChatSession}
+            currentSessionId={sessionId}
+          />
+        </div>
       </div>
 
       {/* Messages */}
@@ -87,7 +170,7 @@ function AiAgentChatInterface({ agentInfo }: { agentInfo: string }) {
       {/* Input form */}
       <div className="border-t border-gray-100 p-4 bg-white">
         <div className="space-y-3">
-          <form onSubmit={handleSubmit} className="flex gap-2">
+          <form onSubmit={handleFormSubmit} className="flex gap-2">
             <input
               className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-full
               focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"

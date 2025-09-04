@@ -1,0 +1,125 @@
+import { streamText } from "ai"
+import { openai } from "@ai-sdk/openai"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import type { NextRequest } from "next/server"
+import { getVideoDetails } from "@/actions/youtube/getVideoDetails"
+import fetchTranscript from "@/tools/fetchTranscript"
+
+export async function POST(req: NextRequest) {
+    try {
+        const { messages, videoId, sessionId } = await req.json()
+
+        // Create Supabase client
+        const cookieStore = await cookies()
+        const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll()
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+                    } catch {
+                        // The `setAll` method was called from a Server Component.
+                        // This can be ignored if you have middleware refreshing
+                        // user sessions.
+                    }
+                },
+            },
+        })
+
+        // Get current user
+        const {
+            data: { user },
+            error: authError,
+        } = await supabase.auth.getUser()
+        if (authError || !user) {
+            return new Response("Unauthorized", { status: 401 })
+        }
+
+        const videoDetails = await getVideoDetails(videoId)
+
+        // Save user message to database if sessionId is provided
+        if (sessionId && messages.length > 0) {
+            const userMessage = messages[messages.length - 1]
+            if (userMessage.role === "user") {
+                console.log("[v0] Saving user message:", { sessionId, content: userMessage.content })
+
+                const { data, error } = await supabase.from("messages").insert({
+                    chat_session_id: sessionId,
+                    role: "user",
+                    content: userMessage.content,
+                    user_id: user.id,
+                })
+
+                if (error) {
+                    console.error("[v0] Error saving user message:", error)
+                } else {
+                    console.log("[v0] User message saved successfully:", data)
+                }
+            }
+        } else {
+            console.log("[v0] No sessionId provided or no messages to save")
+        }
+
+        const systemMessage = `You are an AI agent ready to accept questions from the 
+    user about ONE specific video. The video ID in question is ${videoId} but you'll 
+    refer to this as ${videoDetails?.title || "Selected Video"}. Use emojis to 
+    make the conversation more engaging. If an error occurs, explain it to the 
+    user and ask them to try again later. If the error suggest the user upgrade, 
+    explain that they must upgrade to use the feature, tell them to go to 'Manage Plan'
+     in the header and upgrade. If any tool is used, analyse the response and if 
+     it contains a cache, explain that the transcript is cached because they 
+     previously transcribed the video saving the user a token - use words like database
+      instead of cache to make it more easy to understand. Format for notion.`
+
+        const openaiModel = openai("gpt-4o-mini")
+
+        // Generate AI response
+        const result = await streamText({
+            model: openaiModel,
+            messages: [{ role: "system", content: systemMessage }, ...messages],
+            tools: {
+                fetchTranscript: fetchTranscript,
+            },
+            onFinish: async ({ text }) => {
+                console.log("[v0] onFinish called with text length:", text?.length)
+
+                // Save AI response to database if sessionId is provided
+                if (sessionId && text) {
+                    console.log("[v0] Saving AI response:", { sessionId, textLength: text.length })
+
+                    const { data, error } = await supabase.from("messages").insert({
+                        chat_session_id: sessionId,
+                        role: "assistant",
+                        content: text,
+                        user_id: user.id,
+                    })
+
+                    if (error) {
+                        console.error("[v0] Error saving AI response:", error)
+                    } else {
+                        console.log("[v0] AI response saved successfully:", data)
+                    }
+                } else {
+                    console.log("[v0] No sessionId or text to save in onFinish")
+                }
+            },
+        })
+
+        return result.toDataStreamResponse({
+            getErrorMessage: (error) => {
+                console.error("Server-side error:", error)
+                if (error instanceof Error) {
+                    return `${error.name}: ${error.message}`
+                }
+                return String(error)
+            },
+        })
+    } catch (error) {
+        console.error("Chat API error:", error)
+        return new Response("Internal Server Error", { status: 500 })
+    }
+}
