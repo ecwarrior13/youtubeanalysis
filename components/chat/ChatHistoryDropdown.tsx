@@ -42,7 +42,7 @@ export default function ChatHistoryDropdown({
           chat_messages(count)
         `
         )
-        .eq("video_id", videoId)
+        .eq("resource_id", videoId)
         .order("created_at", { ascending: false });
 
       if (error) {
